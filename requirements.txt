@@ -1,0 +1,9 @@
+streamlit
+pandas
+python-dotenv
+thefuzz
+anthropic
+python-Levenshtein
+requests
+PyMuPDF
+PyPDF2

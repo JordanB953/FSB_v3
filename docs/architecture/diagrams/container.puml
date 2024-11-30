@@ -1,0 +1,32 @@
+@startuml container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person_Ext(owner, "Business Owner", "Provides financial documents")
+Person(analyst, "Financial Analyst", "Creates and manages financial statements")
+
+System_Ext(bankingSystems, "Banking Systems", "Source of PDF statements")
+System_Ext(claudeAPI, "Claude API", "AI-powered transaction categorization")
+System_Ext(bscAPI, "Bank Statement Converter API", "Converts PDF statements to transaction data")
+
+Enterprise_Boundary(enterprise, "Financial Statement Processing") {
+    Container(webApp, "Web Application", "Python, Streamlit", "Provides web interface for processing statements")
+    Container(pdfProcessor, "PDF Processor", "Python", "Processes and converts bank statements")
+    Container(categorizer, "Transaction Categorizer", "Python", "Categorizes transactions using fuzzy matching and AI")
+    Container(statements, "Statement Generator", "Python", "Generates financial statements and visualizations")
+    ContainerDb(fileStorage, "File Storage", "Local File System", "Stores processed statements and results")
+}
+
+Rel(bankingSystems, owner, "Provides", "PDF statements")
+Rel(owner, analyst, "Sends", "PDF statements via email")
+Rel(analyst, webApp, "Uses", "Web interface")
+Rel(webApp, pdfProcessor, "Sends PDFs for processing")
+Rel(pdfProcessor, bscAPI, "Converts via", "API calls")
+Rel(webApp, categorizer, "Requests categorization")
+Rel(categorizer, claudeAPI, "Uses for AI categorization", "API calls")
+Rel(webApp, statements, "Generates statements")
+Rel(pdfProcessor, fileStorage, "Stores processed files")
+Rel(statements, fileStorage, "Stores generated statements")
+
+@enduml

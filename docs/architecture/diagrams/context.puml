@@ -1,0 +1,18 @@
+@startuml context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+LAYOUT_WITH_LEGEND()
+Enterprise_Boundary(enterprise, "Financial Statement Processing") {
+   Person(analyst, "Financial Analyst", "Creates and manages financial statements")
+   
+   System(financialApp, "Financial Statement Builder", "Processes bank statements and categorizes transactions")
+}
+Person_Ext(owner, "Business Owner", "Provides financial documents")
+System_Ext(llmAPI, "LLM API", "AI-powered transaction categorization if fuzzy match fails")
+System_Ext(PDFconverter, "Bank Statement Converter API", "Converts PDF statements to CSV")
+System_Ext(bankingSystems, "Online Banking Systems", "Source of PDF statements")
+Rel_D(bankingSystems, owner, "Provides", "PDF statements")
+Rel_D(owner, analyst, "Sends", "PDF statements via email")
+Rel_D(analyst, financialApp, "Uses", "Web interface")
+Rel(financialApp, llmAPI, "Categorizes via", "API calls")
+Rel(financialApp, PDFconverter, "Processes PDFs", "API calls")
+@enduml

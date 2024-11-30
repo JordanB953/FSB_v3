@@ -1,0 +1,39 @@
+short_description,category
+doordash deposit,Revenue: Delivery
+uber eats deposit,Revenue: Delivery
+grubhub deposit,Revenue: Delivery
+postmates deposit,Revenue: Delivery
+seamless deposit,Revenue: Delivery
+caviar deposit,Revenue: Delivery
+toast pos deposit,Revenue: General
+square pos deposit,Revenue: General
+clover pos deposit,Revenue: General
+shopkeep deposit,Revenue: General
+catering payment,Revenue: Catering
+catering deposit,Revenue: Catering
+private event deposit,Revenue: Catering
+banquet payment,Revenue: Catering
+
+restaurant depot,Cost of Sales: Food
+us foods,Cost of Sales: Food
+sysco foods,Cost of Sales: Food
+performance food group,Cost of Sales: Food
+gordon food service,Cost of Sales: Food
+market basket,Cost of Sales: Food
+costco wholesale,Cost of Sales: Food
+sams club,Cost of Sales: Food
+beverage distributor,Cost of Sales: Beverages
+wine distributor,Cost of Sales: Beverages
+liquor distributor,Cost of Sales: Beverages
+southern glazers,Cost of Sales: Beverages
+breakthru beverage,Cost of Sales: Beverages
+republic national,Cost of Sales: Beverages
+
+hood cleaning,Operating Expenses: Contract Services
+grease trap,Operating Expenses: Contract Services
+webstaurant store,Operating Expenses: Supplies & Equipment
+kitchen equipment,Operating Expenses: Supplies & Equipment
+
+
+
+

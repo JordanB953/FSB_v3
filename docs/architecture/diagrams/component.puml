@@ -1,0 +1,86 @@
+@startuml component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+Container_Boundary(app, "Financial Statement Builder") {
+    ' Core Components
+    Component(mainApp, "TransactionCategorizerApp", "Python Class", "Main application controller and UI")
+    Component(authManager, "AuthManager", "Python Class", "Handles user authentication")
+    
+    ' Create PDF Processing Boundary
+    Boundary(pdfProcessing, "PDF Processing") {
+        Component(pdfProcessor, "PDFProcessor", "Python Class", "Orchestrates PDF processing workflow")
+        Component(pdfRedactor, "PDFRedactor", "Python Class", "Redacts sensitive information")
+        Component(pdfConverter, "PDFConverter", "Python Class", "Handles BSC API integration")
+    }
+        
+    ' Categorization Components
+    Boundary(categorization, "Categorization") {
+        Component(fuzzyMatcher, "FuzzyMatcher", "Python Class", "Performs fuzzy matching using industry & general dictionaries")
+        Component(aiCategorizer, "AICategorizer", "Python Class", "Handles AI-based categorization with Claude API")
+        ComponentDb(categoryDicts, "Category Dictionaries", "CSV Files", "Industry & general category mappings")
+    }
+    
+    ' Statement Generation Components
+    Boundary(statements, "Statement Generation") {
+        Component(statementGen, "StatementGenerator", "Python Class", "Orchestrates financial statement generation")
+        Component(excelGen, "ExcelGenerator", "Python Class", "Generates formatted Excel workbooks")
+        Component(chartGen, "ChartGenerator", "Python Class", "Creates financial charts and visualizations")
+        Component(categoryMapper, "CategoryMapper", "Python Class", "Maps transactions to industry categories")
+        ComponentDb(industryConfig, "Industry Configs", "JSON Files", "Industry-specific category structures")
+    }
+    
+    ' Utility Components
+    Boundary(utilities, "Utilities") {
+        Component(csvHandler, "CSVHandler", "Python Class", "Handles CSV operations")
+        Component(validator, "Validator", "Python Class", "Validates inputs and files")
+        Component(debugConfig, "DebugConfig", "Python Class", "Manages debug configuration")
+    }
+    
+    ' Storage Components
+    Boundary(storage, "Storage") {
+        ComponentDb(fileStore, "File Storage", "File System", "Stores PDFs and results")
+        ComponentDb(statementsOutput, "Statements Output", "File System", "Stores generated Excel statements")
+    }
+}
+
+' External Systems
+System_Ext(claudeAPI, "Claude API", "AI categorization service")
+System_Ext(bscAPI, "Bank Statement Converter API", "PDF to transaction conversion service")
+
+' Main App Relationships
+Rel_R(mainApp, authManager, "Uses")
+Rel_D(mainApp, pdfProcessor, "Processes PDFs via")
+Rel_D(mainApp, fuzzyMatcher, "Categorizes using")
+Rel_D(mainApp, aiCategorizer, "Categorizes using")
+Rel_D(mainApp, statementGen, "Generates statements via")
+Rel_L(mainApp, validator, "Validates inputs via")
+
+' PDF Processing Relationships
+Rel_D(pdfProcessor, pdfRedactor, "Redacts using")
+Rel_D(pdfProcessor, pdfConverter, "Converts using")
+Rel_R(pdfProcessor, csvHandler, "Uses")
+Rel_R(pdfProcessor, fileStore, "Stores files in")
+
+' Statement Generation Relationships
+Rel_D(statementGen, excelGen, "Generates Excel via")
+Rel_R(excelGen, chartGen, "Creates charts using")
+Rel_R(excelGen, categoryMapper, "Maps categories using")
+Rel_R(categoryMapper, industryConfig, "Reads config from")
+Rel_R(statementGen, statementsOutput, "Outputs to")
+
+' External API Relationships
+Rel_R(pdfConverter, bscAPI, "Makes API calls to")
+Rel_R(aiCategorizer, claudeAPI, "Makes API calls to")
+
+' Debug Config Relationships
+Rel_U(pdfRedactor, debugConfig, "Uses")
+Rel_U(pdfConverter, debugConfig, "Uses")
+Rel_R(debugConfig, fileStore, "Configures")
+
+' Categorization Relationships
+Rel_R(fuzzyMatcher, categoryDicts, "Reads rules from")
+Rel_R(aiCategorizer, categoryDicts, "Validates categories using")
+
+@enduml

@@ -1,0 +1,70 @@
+import pandas as pd
+from typing import List
+import os
+
+class CSVHandler:
+    """Handles CSV file operations and transformations."""
+    
+    @staticmethod
+    def combine_tables(tables: List[pd.DataFrame]) -> pd.DataFrame:
+        """
+        Combine multiple tables into a single DataFrame with standardized columns.
+        """
+        if not tables:
+            return pd.DataFrame()
+
+        # Standardize column names
+        standardized_tables = []
+        for table in tables:
+            if not table.empty:
+                # Ensure required columns exist
+                required_cols = ['date', 'description', 'amount']
+                if all(col in table.columns for col in required_cols):
+                    standardized_table = table[required_cols].copy()
+                    standardized_tables.append(standardized_table)
+
+        if not standardized_tables:
+            return pd.DataFrame()
+
+        # Combine all tables
+        combined_df = pd.concat(standardized_tables, ignore_index=True)
+        
+        # Create short-description column
+        combined_df['short_description'] = combined_df['description'].apply(
+            lambda x: CSVHandler._create_short_description(x)
+        )
+        
+        return combined_df
+
+    @staticmethod
+    def _create_short_description(description: str) -> str:
+        """
+        Create shortened description by truncating after 30 chars or before 4+ numbers.
+        """
+        if not description:
+            return ""
+            
+        # Truncate to 30 characters if no number sequence found
+        description = str(description).strip()
+        shortened = description[:30]
+        
+        # Look for sequence of 4 or more numbers
+        import re
+        number_match = re.search(r'\d{4,}', description[:30])
+        if number_match:
+            shortened = description[:number_match.start()].strip()
+            
+        return shortened.strip()
+
+    @staticmethod
+    def save_to_csv(df: pd.DataFrame, filepath: str) -> bool:
+        """
+        Save DataFrame to CSV file.
+        Returns True if successful, False otherwise.
+        """
+        try:
+            df.to_csv(filepath, index=False)
+            return True
+        except Exception as e:
+            print(f"Error saving CSV: {str(e)}")
+            return False
