@@ -41,6 +41,10 @@ class AICategorizer:
         # Configuration
         self.batch_size = 5  # Number of transaction groups per batch
         
+        # Path to ranges file
+        ranges_path = Path(__file__).parent.parent / "dictionaries" / "ranges" / "parent_category_ranges.csv"
+        self.category_ranges = self._load_category_ranges(ranges_path)
+        
     def _load_valid_categories(self, industry_path: str, general_path: str) -> Set[str]:
         """
         Load and combine unique categories from both dictionaries.
@@ -85,15 +89,29 @@ class AICategorizer:
         try:
             categories_str = ", ".join(sorted(self.valid_categories))
             
+            # Format parent category ranges for prompt
+            range_guidelines = []
+            for parent_cat, ranges in self.category_ranges.items():
+                range_guidelines.append(
+                    f"- {parent_cat}: ${ranges['min_amount']:,.2f} to ${ranges['max_amount']:,.2f}"
+                )
+            
+            amount_guidance = "\nParent Category Amount Ranges:\n" + "\n".join(range_guidelines)
+            
             prompt = f"""
             Your task is to categorize transaction groups. You must choose from these categories only:
             {categories_str}
+            {amount_guidance}
 
             Guidelines:
-            1. Analyze the transaction pattern (frequency and amounts) for each group
-            2. Choose the most appropriate category based on description and patterns
-            3. Provide a confidence level between 0 and 1
-            4. Only update the llm_category and llm_confidence fields
+            1. Analyze the transaction pattern (frequency and amounts)
+            2. Consider the parent category ranges when choosing a category
+            3. Lower your confidence score if transaction amounts fall outside their parent category's typical range
+            4. Provide a confidence level between 0 and 1
+
+            For example:
+            - A $500 transaction categorized as "Revenue: Services" is within the Revenue range (${self.category_ranges['Revenue']['min_amount']}-${self.category_ranges['Revenue']['max_amount']})
+            - A $150,000 transaction categorized as "Revenue: Services" should have a lower confidence score as it's outside the typical range
 
             Transaction Groups:
             {json.dumps(transaction_groups, indent=2)}
@@ -320,15 +338,48 @@ class AICategorizer:
             logger.error(f"Error preparing batches: {str(e)}")
             raise
 
+    def _get_parent_category(self, category: str) -> str:
+        """
+        Extract parent category from full category string.
+        
+        Args:
+            category: Full category (e.g., 'Revenue: Services')
+            
+        Returns:
+            Parent category (e.g., 'Revenue')
+        """
+        return category.split(':')[0].strip() if category else None
+
+    def _calculate_percent_outside_range(self, amount: float, category: str) -> float:
+        """
+        Calculate how far outside the expected range a transaction amount is.
+        
+        Args:
+            amount: Transaction amount
+            category: Full category name
+            
+        Returns:
+            Percentage outside range (negative if below min, positive if above max, 0 if within range)
+        """
+        try:
+            parent_category = self._get_parent_category(category)
+            if not parent_category or parent_category not in self.category_ranges:
+                return 0
+            
+            ranges = self.category_ranges[parent_category]
+            if amount < ranges['min_amount']:
+                return ((amount - ranges['min_amount']) / ranges['min_amount']) * 100
+            elif amount > ranges['max_amount']:
+                return ((amount - ranges['max_amount']) / ranges['max_amount']) * 100
+            return 0
+            
+        except Exception as e:
+            logger.error(f"Error calculating percent outside range: {str(e)}")
+            return 0
+
     def process_transactions(self, transactions: List[Dict]) -> List[Dict]:
         """
         Process uncategorized transactions through LLM categorization.
-        
-        Args:
-            transactions: List of transaction dictionaries
-            
-        Returns:
-            List of transactions with LLM categorizations added
         """
         try:
             # Group similar transactions
@@ -364,24 +415,56 @@ class AICategorizer:
                 if group_result:
                     processed_trans['llm_category'] = group_result['llm_category']
                     processed_trans['llm_confidence'] = group_result['llm_confidence']
+                    
+                    # Calculate percent outside range
+                    amount = float(trans['amount'])
+                    processed_trans['percent_outside_range'] = self._calculate_percent_outside_range(
+                        amount, 
+                        group_result['llm_category']
+                    )
                 else:
                     # If no result found, mark as uncategorized
                     processed_trans['llm_category'] = None
                     processed_trans['llm_confidence'] = None
+                    processed_trans['percent_outside_range'] = None
                 
                 processed_transactions.append(processed_trans)
             
-            # Log processing statistics
-            total = len(processed_transactions)
-            categorized = sum(1 for t in processed_transactions if t['llm_category'] is not None)
+            # Update logging to include range statistics
+            outside_range = sum(1 for t in processed_transactions 
+                              if t['percent_outside_range'] is not None and t['percent_outside_range'] != 0)
             
             logger.info(f"Processing complete:")
-            logger.info(f"- Total transactions: {total}")
-            logger.info(f"- Successfully categorized: {categorized}")
-            logger.info(f"- Uncategorized: {total - categorized}")
+            logger.info(f"- Total transactions: {len(processed_transactions)}")
+            logger.info(f"- Successfully categorized: {sum(1 for t in processed_transactions if t['llm_category'])}")
+            logger.info(f"- Outside expected ranges: {outside_range}")
             
             return processed_transactions
             
         except Exception as e:
             logger.error(f"Error processing transactions: {str(e)}")
             raise
+
+    def _load_category_ranges(self, ranges_path: Path) -> Dict[str, Dict[str, float]]:
+        """
+        Load parent category ranges from CSV.
+        
+        Args:
+            ranges_path: Path to parent_category_ranges.csv
+            
+        Returns:
+            Dictionary of parent categories with their min/max amounts
+        """
+        try:
+            ranges_df = pd.read_csv(ranges_path)
+            ranges = {}
+            for _, row in ranges_df.iterrows():
+                ranges[row['parent_category']] = {
+                    'min_amount': float(row['min_amount']),
+                    'max_amount': float(row['max_amount'])
+                }
+            logger.info(f"Loaded {len(ranges)} parent category ranges")
+            return ranges
+        except Exception as e:
+            logger.error(f"Error loading category ranges: {str(e)}")
+            return {}

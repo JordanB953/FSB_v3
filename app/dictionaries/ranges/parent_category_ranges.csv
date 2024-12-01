@@ -1,0 +1,6 @@
+parent_category,min_amount,max_amount,last_updated,data_source,comments
+Revenue,50,10000,2024-11-30,historical,"Typical monthly revenue range"
+Cost of Sales,100,20000,2024-11-30,estimated,"Based on industry averages"
+Operating Expenses,50,10000,2024-11-30,estimated,"Common monthly operating costs"
+Investing Activities,1000,100000,2024-11-30,estimated,"Major equipment and improvements"
+Financing Activities,1000,100000,2024-11-30,estimated,"Loan payments and capital transactions" 
